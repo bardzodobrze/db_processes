@@ -1,5 +1,6 @@
 import pyodbc
 
+
 def set_connection_and_cursor(server, database):
     # Create the connection string with Windows Authentication
     connection_string = (
@@ -87,18 +88,105 @@ def get_orders_by_coupon_and_dates(cursor, coupon_name, date_1, date_2):
     )
     return cursor.fetchall()
 
-def get_order_lines_by_store_and_date(cursor, date):
+def get_orders_by_store_and_date(cursor, date):
     cursor.execute(
         """
-        SELECT
-            [Added], [Location_Code], [Order_Number], [OrdLineFinalPrice]
-        FROM [POS].[dbo].[Order_Lines]
-        WHERE [Deleted] = 0
-        AND [Added] >= ?
+        SELECT [Added], [Location_Code], [Order_Number], [OrderFinalPrice]
+        FROM [POS].[dbo].[Orders]
+        WHERE [Order_Date] = ?
         """,
         date
     )
     return cursor.fetchall()
 
+
+def get_header_rows_between_dates(cursor, date_1, date_2):
+    cursor.execute(
+        """
+        SELECT [Tienda], [Numero_Orden], [Orden_Fecha], [Orden_Hora], [SubTotal], [IGV], [RecCon], [OrderFinalPrice],
+        [Customer], [serie_ce], [preimpreso_ce], [Doc_Anulado], [Estado_Orden], [Ruc], [RazonSocial], [MontoDelivery],
+        [Met_Servicio], [Tipo_Pago], [name], [phone_number], [Vendedor], [Delivery]
+        FROM [MIGRAPOS].[dbo].[Documentos_Cabecera_Hist]
+        WHERE [Orden_Fecha] BETWEEN ? AND ?
+        """,
+        (date_1, date_2)
+    )
+    return cursor.fetchall()
+
+def get_detail_rows_between_dates(cursor, date_1, date_2):
+    cursor.execute(
+        """
+        SELECT [Numero_Orden], [Tienda], [FechaOrden], [HoraOrden], [SubTotal], [IGV], [RecargoCon],
+        [PrecioFinal], [Cliente], [SerieComprobante], [PreimpresoComprobante], [DocumentoAnulado],
+        [EstadoOrden], [RUC], [RazonSocial], [MetodoServicio], [TipoPago], [Item], [Descuento],
+        [PrecioActual], [PrecioAntesDescuento], [PrecioDespuesDescuento], [Impuestos], [IGVDetalle],
+        [RecargoCDetalle], [PrecioSinImpuestos], [PrecioTotal], [Cantidad], [ToppingDescriptions],
+        [CodigoProducto], [Cupon], [DescripcionLinea], [ToppingDescriptionsPrepLinea], 
+        [ToppingDescriptionsMakeLinea]
+        FROM [MIGRAPOS].[dbo].[Detalle_Documentos_Hist]
+        WHERE [FechaOrden] BETWEEN ? AND ?
+        """,
+        (date_1, date_2)
+    )
+    return cursor.fetchall()
+
+def get_intraday_metrics(cursor, datetime_1, datetime_2):
+    cursor.execute(
+        """
+        SELECT
+            [Location_Code] AS [Tienda],
+            COUNT(*) AS [Ordenes],
+            SUM(OrderFinalPrice) AS [Venta],
+            AVG(CAST(CASE WHEN [Delivery_Time] IS NOT NULL THEN DATEDIFF(MINUTE, [Order_Saved], [Delivery_Time]) END AS FLOAT)) AS [ADT]
+        FROM
+            [POS].[dbo].[Orders]
+        WHERE 
+            [Order_Saved] BETWEEN ? AND ?
+        GROUP BY 
+            [Location_Code];
+        """,
+        (datetime_1, datetime_2)
+    )
+
+    return cursor.fetchall()
+
+def get_store_info(cursor):
+    cursor.execute(
+        """
+        SELECT [Zona], [Responsable], [Id], [Descripcion]
+        FROM [MIGRAPOS].[dbo].[Tienda_Detalle]
+        """
+    )
+    return cursor.fetchall()
+
+
+
+store_ids = [
+    "18600",
+    "18601",
+    "18602",
+    "18603",
+    "18604",
+    "18605",
+    "18606",
+    "18607",
+    "18608",
+    "18609",
+    "18610",
+    "18611",
+    "18612",
+    "18614",
+    "18615",
+    "18616",
+    "18617",
+    "18618",
+    "18619",
+    "18620",
+    "18621",
+    "18622",
+    "18623",
+    "18624",
+    "18625",
+]
 
 
